@@ -1,0 +1,36 @@
+---
+- name: Proverit` stoit timezone ili net
+  command: timedatectl set-timezone {{ timezone }}
+  when: ansible_date_time.tz != timezone
+
+- name: Postav` paket chrony
+  yum:
+    name: chrony
+    state: present
+
+- name: Nastroi NTP servers dlya chrony
+  lineinfile:
+    path: /etc/chrony.conf
+    regexp: '^pool'
+    line: |
+      pool {{ item }} iburst
+  with_items: "{{ ntp_servers }}"
+  notify: Restart chronyd
+
+- name: Chrondy, allo ti rabotaesh?
+  service:
+    name: chronyd
+    state: started
+    enabled: yes
+
+- name: systemd-timesyncd off
+  systemd:
+    name: systemd-timesyncd
+    enabled: no
+    state: stopped
+
+- name: ntpd off
+  service:
+    name: ntpd
+    enabled: no
+    state: stopped
